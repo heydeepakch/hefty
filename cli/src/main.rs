@@ -74,12 +74,12 @@ fn parse_args(args: impl IntoIterator<Item = String>) -> Result<Command, String>
 
 fn usage() -> String {
     format!(
-        "Usage: storage-cleanup-cli [PATH] [--top N]\n\n\
+        "Usage: hefty-cli [PATH] [--top N]\n\n\
          Recursively scans PATH and reports the largest files, largest directories,\n\
          likely cleanup candidates, and directories that could not be accessed.\n\n\
          Examples:\n\
-           storage-cleanup-cli C:\\ --top 25\n\
-           storage-cleanup-cli \"%LOCALAPPDATA%\\Temp\"\n\n\
+           hefty-cli C:\\ --top 25\n\
+           hefty-cli \"%LOCALAPPDATA%\\Temp\"\n\n\
          This tool is read-only. It reports cleanup candidates but never deletes files."
     )
 }

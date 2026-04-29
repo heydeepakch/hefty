@@ -248,7 +248,7 @@ mod tests {
 
     #[test]
     fn aggregates_sizes_and_candidates() {
-        let root = test_root("storage-cleanup-helper-scan");
+        let root = test_root("hefty-scan");
         fs::create_dir_all(root.join("nested").join("cache")).expect("create fixture dirs");
         write_bytes(&root.join("large.bin"), 10);
         write_bytes(&root.join("nested").join("note.tmp"), 5);

@@ -1,11 +1,11 @@
 [package]
-name = "storage-cleanup-helper"
+name = "hefty"
 version = "0.1.0"
 edition = "2024"
-description = "A read-only desktop app that helps you find what's filling up your disk."
+description = "A read-only desktop app that finds what's filling up your disk."
 
 [[bin]]
-name = "storage-cleanup-helper"
+name = "hefty"
 path = "src/main.rs"
 
 [build-dependencies]

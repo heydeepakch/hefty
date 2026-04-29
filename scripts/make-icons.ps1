@@ -2,8 +2,12 @@ Add-Type -AssemblyName System.Drawing
 
 $root = Split-Path -Parent $PSScriptRoot
 $iconsDir = Join-Path $root "app\icons"
+$uiDir = Join-Path $root "app\ui"
 if (-not (Test-Path $iconsDir)) {
     New-Item -ItemType Directory -Path $iconsDir | Out-Null
+}
+if (-not (Test-Path $uiDir)) {
+    New-Item -ItemType Directory -Path $uiDir | Out-Null
 }
 
 function New-AppIcon {
@@ -58,3 +62,7 @@ $fs.Close()
 $icon.Dispose()
 $bmp.Dispose()
 Write-Host "Wrote $icoPath"
+
+$brandIconPath = Join-Path $uiDir "brand-icon.png"
+Copy-Item -Force (Join-Path $iconsDir "128x128.png") $brandIconPath
+Write-Host "Wrote $brandIconPath"
