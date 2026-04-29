@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Storage Cleanup Helper</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <main class="app">
+      <header class="app-header">
+        <div class="brand">
+          <span class="brand-mark" aria-hidden="true"></span>
+          <h1>Storage Cleanup Helper</h1>
+        </div>
+        <p class="subtitle">Read-only disk scan. Identifies what's consuming space, never modifies files.</p>
+      </header>
+
+      <section class="toolbar">
+        <div class="input-group">
+          <label for="path-input" class="visually-hidden">Path to scan</label>
+          <input
+            id="path-input"
+            type="text"
+            placeholder="C:\  •  %LOCALAPPDATA%\Temp  •  D:\Projects"
+            spellcheck="false"
+            autocomplete="off"
+          />
+          <button id="browse-btn" type="button" class="btn btn-ghost" title="Choose folder">
+            <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M1.5 4.5h4l1.5 2h7v6.5a.5.5 0 0 1-.5.5h-12a.5.5 0 0 1-.5-.5v-8.5z"/>
+            </svg>
+            <span>Browse</span>
+          </button>
+          <button id="scan-btn" type="button" class="btn btn-primary">
+            <span>Scan</span>
+            <kbd>↵</kbd>
+          </button>
+        </div>
+
+        <div class="toolbar-row">
+          <div class="quick-picks">
+            <span class="quick-label">Quick</span>
+            <button class="chip" data-path="C:\">C:\</button>
+            <button class="chip" data-path="%USERPROFILE%">User</button>
+            <button class="chip" data-path="%LOCALAPPDATA%\Temp">Temp</button>
+            <button class="chip" data-path="%LOCALAPPDATA%">LocalAppData</button>
+            <button class="chip" data-path="%PROGRAMDATA%">ProgramData</button>
+          </div>
+
+          <div class="top-n">
+            <label for="top-input">Top</label>
+            <input id="top-input" type="number" min="1" max="500" value="25" />
+            <span class="dim">per section</span>
+          </div>
+        </div>
+      </section>
+
+      <section id="status" class="status status-idle" aria-live="polite">
+        <span id="status-text">Ready</span>
+        <span id="status-detail" class="dim"></span>
+      </section>
+
+      <section id="results" class="results hidden">
+        <div class="stat-strip">
+          <div class="stat">
+            <span class="stat-label">Total</span>
+            <span class="stat-value" id="stat-total">—</span>
+          </div>
+          <div class="stat-divider"></div>
+          <div class="stat">
+            <span class="stat-label">Files</span>
+            <span class="stat-value" id="stat-files">—</span>
+          </div>
+          <div class="stat">
+            <span class="stat-label">Folders</span>
+            <span class="stat-value" id="stat-dirs">—</span>
+          </div>
+          <div class="stat">
+            <span class="stat-label">Hidden</span>
+            <span class="stat-value" id="stat-hidden">—</span>
+          </div>
+          <div class="stat">
+            <span class="stat-label">Symlinks</span>
+            <span class="stat-value" id="stat-symlinks">—</span>
+          </div>
+          <div class="stat">
+            <span class="stat-label">Errors</span>
+            <span class="stat-value" id="stat-errors">—</span>
+          </div>
+          <div class="stat-spacer"></div>
+          <div class="stat stat-meta">
+            <span class="stat-label">Scanned</span>
+            <span class="stat-value mono" id="scan-root">—</span>
+          </div>
+          <div class="stat stat-meta">
+            <span class="stat-label">Duration</span>
+            <span class="stat-value" id="scan-duration">—</span>
+          </div>
+        </div>
+
+        <details class="section" open>
+          <summary>
+            <span class="summary-title">Largest directories</span>
+            <span class="summary-meta" id="dirs-meta"></span>
+          </summary>
+          <div class="table-wrap">
+            <table id="dirs-table" class="data-table">
+              <colgroup><col class="col-size"/><col/></colgroup>
+              <thead>
+                <tr><th class="num">Size</th><th>Path</th></tr>
+              </thead>
+              <tbody></tbody>
+            </table>
+          </div>
+        </details>
+
+        <details class="section" open>
+          <summary>
+            <span class="summary-title">Largest files</span>
+            <span class="summary-meta" id="files-meta"></span>
+          </summary>
+          <div class="table-wrap">
+            <table id="files-table" class="data-table">
+              <colgroup><col class="col-size"/><col/></colgroup>
+              <thead>
+                <tr><th class="num">Size</th><th>Path</th></tr>
+              </thead>
+              <tbody></tbody>
+            </table>
+          </div>
+        </details>
+
+        <details class="section" open>
+          <summary>
+            <span class="summary-title">Likely cleanup candidates</span>
+            <span class="summary-meta" id="candidates-meta"></span>
+          </summary>
+          <div class="advisory">
+            Hints, not deletion instructions. Logs, caches, dumps, and metadata may still be in use. This app never deletes anything.
+          </div>
+          <div class="table-wrap">
+            <table id="candidates-table" class="data-table">
+              <colgroup><col class="col-size"/><col/><col class="col-reason"/></colgroup>
+              <thead>
+                <tr><th class="num">Size</th><th>Path</th><th>Reason</th></tr>
+              </thead>
+              <tbody></tbody>
+            </table>
+          </div>
+        </details>
+
+        <details class="section">
+          <summary>
+            <span class="summary-title">Access errors</span>
+            <span class="summary-meta" id="errors-meta"></span>
+          </summary>
+          <div class="table-wrap">
+            <table id="errors-table" class="data-table">
+              <thead>
+                <tr><th>Path</th><th>Error</th></tr>
+              </thead>
+              <tbody></tbody>
+            </table>
+          </div>
+        </details>
+      </section>
+
+      <footer class="app-footer">
+        <span>Read-only · No files are modified or deleted</span>
+        <span class="version">v0.1.0</span>
+      </footer>
+    </main>
+
+    <script src="main.js"></script>
+  </body>
+</html>

@@ -1,0 +1,11 @@
+[package]
+name = "storage-cleanup-cli"
+version = "0.1.0"
+edition = "2024"
+
+[[bin]]
+name = "storage-cleanup-cli"
+path = "src/main.rs"
+
+[dependencies]
+scanner = { path = "../scanner" }

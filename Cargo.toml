@@ -1,6 +1,3 @@
-[package]
-name = "storage-cleanup-helper"
-version = "0.1.0"
-edition = "2024"
-
-[dependencies]
+[workspace]
+members = ["scanner", "cli", "app"]
+resolver = "2"

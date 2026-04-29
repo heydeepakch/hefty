@@ -1,0 +1,18 @@
+[package]
+name = "storage-cleanup-helper"
+version = "0.1.0"
+edition = "2024"
+description = "A read-only desktop app that helps you find what's filling up your disk."
+
+[[bin]]
+name = "storage-cleanup-helper"
+path = "src/main.rs"
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+
+[dependencies]
+tauri = { version = "2", features = [] }
+tauri-plugin-dialog = "2"
+serde = { version = "1", features = ["derive"] }
+scanner = { path = "../scanner" }
