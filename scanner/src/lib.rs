@@ -3,6 +3,7 @@ use std::cmp::Reverse;
 use std::fs;
 use std::io;
 use std::path::{Path, PathBuf};
+use std::sync::atomic::{AtomicBool, Ordering};
 
 #[derive(Debug, Serialize)]
 pub struct ScanReport {
@@ -13,6 +14,7 @@ pub struct ScanReport {
     pub hidden_entries: u64,
     pub symlinks_skipped: u64,
     pub other_entries: u64,
+    pub cancelled: bool,
     pub errors: Vec<ScanError>,
     pub files: Vec<SizedEntry>,
     pub dirs: Vec<SizedEntry>,
@@ -39,6 +41,11 @@ pub struct CleanupCandidate {
 }
 
 pub fn analyze(root: &Path) -> io::Result<ScanReport> {
+    let cancel = AtomicBool::new(false);
+    analyze_with_cancel(root, &cancel)
+}
+
+pub fn analyze_with_cancel(root: &Path, cancel: &AtomicBool) -> io::Result<ScanReport> {
     let root = root.to_path_buf();
     let metadata = fs::symlink_metadata(&root)?;
     let mut report = ScanReport {
@@ -49,13 +56,14 @@ pub fn analyze(root: &Path) -> io::Result<ScanReport> {
         hidden_entries: 0,
         symlinks_skipped: 0,
         other_entries: 0,
+        cancelled: false,
         errors: Vec::new(),
         files: Vec::new(),
         dirs: Vec::new(),
         candidates: Vec::new(),
     };
 
-    report.total_size = scan_entry(&root, &metadata, &mut report);
+    report.total_size = scan_entry(&root, &metadata, &mut report, cancel);
     report.files.sort_by_key(|entry| Reverse(entry.size));
     report.dirs.sort_by_key(|entry| Reverse(entry.size));
     report.candidates.sort_by_key(|entry| Reverse(entry.size));
@@ -63,7 +71,17 @@ pub fn analyze(root: &Path) -> io::Result<ScanReport> {
     Ok(report)
 }
 
-fn scan_entry(path: &Path, metadata: &fs::Metadata, report: &mut ScanReport) -> u64 {
+fn scan_entry(
+    path: &Path,
+    metadata: &fs::Metadata,
+    report: &mut ScanReport,
+    cancel: &AtomicBool,
+) -> u64 {
+    if cancel.load(Ordering::Relaxed) {
+        report.cancelled = true;
+        return 0;
+    }
+
     if metadata.file_type().is_symlink() {
         report.symlinks_skipped += 1;
         return 0;
@@ -97,12 +115,18 @@ fn scan_entry(path: &Path, metadata: &fs::Metadata, report: &mut ScanReport) -> 
         match fs::read_dir(path) {
             Ok(entries) => {
                 for entry in entries {
+                    if cancel.load(Ordering::Relaxed) {
+                        report.cancelled = true;
+                        break;
+                    }
+
                     match entry {
                         Ok(entry) => {
                             let child_path = entry.path();
                             match fs::symlink_metadata(&child_path) {
                                 Ok(child_metadata) => {
-                                    total += scan_entry(&child_path, &child_metadata, report);
+                                    total +=
+                                        scan_entry(&child_path, &child_metadata, report, cancel);
                                 }
                                 Err(error) => report.errors.push(ScanError {
                                     path: child_path,
@@ -281,6 +305,22 @@ mod tests {
         assert_eq!(format_bytes(900), "900 B");
         assert_eq!(format_bytes(1536), "1.5 KB");
         assert_eq!(format_bytes(10 * 1024 * 1024), "10 MB");
+    }
+
+    #[test]
+    fn reports_cancelled_scan() {
+        let root = test_root("hefty-cancelled-scan");
+        fs::create_dir_all(&root).expect("create fixture root");
+        write_bytes(&root.join("large.bin"), 10);
+        let cancel = AtomicBool::new(true);
+
+        let report = analyze_with_cancel(&root, &cancel).expect("scan should stop cleanly");
+
+        assert!(report.cancelled);
+        assert_eq!(report.total_size, 0);
+        assert_eq!(report.files_scanned, 0);
+
+        fs::remove_dir_all(root).expect("remove fixture");
     }
 
     fn test_root(name: &str) -> PathBuf {
