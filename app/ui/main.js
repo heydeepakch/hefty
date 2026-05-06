@@ -22,6 +22,7 @@ const statusDetail = $("status-detail");
 const resultsEl = $("results");
 
 let scanning = false;
+let stopping = false;
 
 function setStatus(kind, text, detail = "") {
   statusEl.classList.remove("status-idle", "status-busy", "status-good", "status-error");
@@ -51,12 +52,24 @@ browseBtn.addEventListener("click", async () => {
   }
 });
 
-scanBtn.addEventListener("click", () => runScan());
+scanBtn.addEventListener("click", () => {
+  if (scanning) {
+    stopScan();
+  } else {
+    runScan();
+  }
+});
 pathInput.addEventListener("keydown", (e) => {
   if (e.key === "Enter") runScan();
 });
 
 document.addEventListener("keydown", (e) => {
+  if (e.key === "Escape" && scanning) {
+    e.preventDefault();
+    stopScan();
+    return;
+  }
+
   if (e.key === "F5" || (e.ctrlKey && (e.key === "r" || e.key === "R"))) {
     e.preventDefault();
     location.reload();
@@ -74,7 +87,8 @@ async function runScan() {
   }
 
   scanning = true;
-  scanBtn.disabled = true;
+  stopping = false;
+  setScanButtonMode("stop");
   browseBtn.disabled = true;
   pathInput.disabled = true;
   setStatus("busy", "Scanning…", `${rawPath} — large drives can take a few minutes`);
@@ -85,20 +99,55 @@ async function runScan() {
     const response = await invoke("scan", { path: rawPath });
     const elapsedMs = performance.now() - startedAt;
     renderResults(response, elapsedMs);
-    setStatus(
-      "good",
-      "Scan complete",
-      `${response.total_size_human} across ${response.report.files_scanned.toLocaleString()} files in ${formatDuration(elapsedMs)}`,
-    );
+    if (response.report.cancelled) {
+      setStatus(
+        "idle",
+        "Scan stopped",
+        `Partial results: ${response.total_size_human} across ${response.report.files_scanned.toLocaleString()} files in ${formatDuration(elapsedMs)}`,
+      );
+    } else {
+      setStatus(
+        "good",
+        "Scan complete",
+        `${response.total_size_human} across ${response.report.files_scanned.toLocaleString()} files in ${formatDuration(elapsedMs)}`,
+      );
+    }
   } catch (err) {
     console.error(err);
     setStatus("error", "Scan failed", String(err));
   } finally {
     scanning = false;
+    stopping = false;
     scanBtn.disabled = false;
+    setScanButtonMode("scan");
     browseBtn.disabled = false;
     pathInput.disabled = false;
   }
+}
+
+async function stopScan() {
+  if (!scanning || stopping) return;
+
+  stopping = true;
+  scanBtn.disabled = true;
+  setStatus("busy", "Stopping…", "Finishing the current directory read, then the scan will stop");
+  try {
+    await invoke("stop_scan");
+  } catch (err) {
+    console.error(err);
+    scanBtn.disabled = false;
+    stopping = false;
+    setStatus("error", "Could not stop scan", String(err));
+  }
+}
+
+function setScanButtonMode(mode) {
+  const label = scanBtn.querySelector("span");
+  const key = scanBtn.querySelector("kbd");
+  scanBtn.classList.toggle("btn-stop", mode === "stop");
+  if (mode === "scan") scanBtn.disabled = false;
+  if (label) label.textContent = mode === "stop" ? "Stop" : "Scan";
+  if (key) key.textContent = mode === "stop" ? "Esc" : "↵";
 }
 
 function formatBytes(bytes) {

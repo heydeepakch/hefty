@@ -52,6 +52,7 @@
     --bar-mid: rgba(39, 39, 42, 0.16);
     --bar-hi: rgba(39, 39, 42, 0.28);
   }
+
 }
 
 * {
@@ -293,6 +294,36 @@ button, input { font: inherit; color: inherit; }
 }
 .btn-primary:hover:not(:disabled) { background: var(--accent-strong); }
 .btn-primary:active:not(:disabled) { transform: translateY(0.5px); }
+
+.btn-stop {
+  background: rgba(240, 107, 107, 0.12);
+  color: #ffd6d6;
+  border-color: rgba(240, 107, 107, 0.28);
+}
+.btn-stop:hover:not(:disabled) {
+  background: rgba(240, 107, 107, 0.18);
+  border-color: rgba(240, 107, 107, 0.38);
+}
+.btn-stop kbd {
+  background: rgba(240, 107, 107, 0.14);
+  color: #ffd6d6;
+}
+
+@media (prefers-color-scheme: light) {
+  .btn-stop {
+    background: rgba(220, 38, 38, 0.08);
+    color: #7f1d1d;
+    border-color: rgba(220, 38, 38, 0.2);
+  }
+  .btn-stop:hover:not(:disabled) {
+    background: rgba(220, 38, 38, 0.12);
+    border-color: rgba(220, 38, 38, 0.28);
+  }
+  .btn-stop kbd {
+    background: rgba(220, 38, 38, 0.1);
+    color: #7f1d1d;
+  }
+}
 
 .btn-ghost {
   background: transparent;
